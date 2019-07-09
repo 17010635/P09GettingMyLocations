@@ -21,9 +21,13 @@ import com.google.android.gms.location.LocationCallback;
 import com.google.android.gms.location.LocationServices;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
+import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.UiSettings;
+import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.LatLng;
+import com.google.android.gms.maps.model.Marker;
+import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.android.gms.tasks.Task;
 
@@ -55,62 +59,81 @@ public class MainActivity extends AppCompatActivity {
         SupportMapFragment mapFragment = (SupportMapFragment)
                 fm.findFragmentById(R.id.map);
 
-        UiSettings ui = map.getUiSettings();
-
-        ui.setCompassEnabled(true);
-        ui.setZoomControlsEnabled(true);
-        ui.setMapToolbarEnabled(true);
-        ui.isRotateGesturesEnabled();
-
         if (checkPermission()) {
-            //Folder
-            folderLocation =
-                    Environment.getExternalStorageDirectory()
-                            .getAbsolutePath() + "/ProblemStatement";
-            File folder = new File(folderLocation);
-            if (folder.exists() == false) {
-                boolean result = folder.mkdir();
-                if (result == true) {
-                    Log.d("File Read/Write", "Folder created");
-                } else {
-                    Log.d("File Read/Write", "Folder created failed");
-                }
-            }
 
-            //Location
-            Task<Location> task = client.getLastLocation();
-            task.addOnSuccessListener(MainActivity.this, new OnSuccessListener<Location>() {
+            mapFragment.getMapAsync(new OnMapReadyCallback() {
                 @Override
-                public void onSuccess(Location location) {
-                    if (location != null) {
-                        double lat = location.getLatitude();
-                        double lng = location.getLongitude();
-                        tvLat.setText(lat + "");
-                        tvLng.setText(lng + "");
+                public void onMapReady(GoogleMap googleMap) {
+                    map = googleMap;
 
-                        LatLng poi_lastLocation = new LatLng(lat, lng);
-                        map.moveCamera(CameraUpdateFactory.newLatLngZoom(poi_lastLocation, 11));
-                        //Write Data
-                        try {
-                            folderLocation = Environment.getExternalStorageDirectory().getAbsolutePath() + "/ProblemStatement";
-                            File targetFile = new File(folderLocation, "data.txt");
-                            FileWriter writer = new FileWriter(targetFile, true);
-                            writer.write( lat + ", " + lng + "\n");
-                            writer.flush();
-                            writer.close();
-                        } catch (Exception e) {
-                            Toast.makeText(MainActivity.this, "Failed to write!", Toast.LENGTH_LONG).show();
-                            e.printStackTrace();
-                        }
+                    int permissionCheck = ContextCompat.checkSelfPermission(MainActivity.this,
+                            android.Manifest.permission.ACCESS_FINE_LOCATION);
 
-                        //debug
-                        String msg = "Lat :" + location.getLatitude() +
-                                " Lng : " + location.getLongitude();
-                        Toast.makeText(MainActivity.this, msg, Toast.LENGTH_SHORT).show();
+                    if (permissionCheck == PermissionChecker.PERMISSION_GRANTED) {
+                        map.setMyLocationEnabled(true);
                     } else {
-                        String msg = "No Last Known Location found";
-                        Toast.makeText(MainActivity.this, msg, Toast.LENGTH_SHORT).show();
+                        Log.e("GMap - Permission", "GPS access has not been granted");
+                        ActivityCompat.requestPermissions(MainActivity.this,
+                                new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, 0);
                     }
+
+                    UiSettings ui = map.getUiSettings();
+
+                    ui.setCompassEnabled(true);
+                    ui.setZoomControlsEnabled(true);
+                    ui.setMapToolbarEnabled(true);
+                    ui.isRotateGesturesEnabled();
+
+                    //Folder
+                    folderLocation =
+                            Environment.getExternalStorageDirectory()
+                                    .getAbsolutePath() + "/ProblemStatement";
+                    File folder = new File(folderLocation);
+                    if (folder.exists() == false) {
+                        boolean result = folder.mkdir();
+                        if (result == true) {
+                            Log.d("File Read/Write", "Folder created");
+                        } else {
+                            Log.d("File Read/Write", "Folder created failed");
+                        }
+                    }
+
+                    //Location
+                    Task<Location> task = client.getLastLocation();
+                    task.addOnSuccessListener(MainActivity.this, new OnSuccessListener<Location>() {
+                        @Override
+                        public void onSuccess(Location location) {
+                            if (location != null) {
+                                double lat = location.getLatitude();
+                                double lng = location.getLongitude();
+                                tvLat.setText(lat + "");
+                                tvLng.setText(lng + "");
+
+                                LatLng poi_lastLocation = new LatLng(lat, lng);
+                                map.moveCamera(CameraUpdateFactory.newLatLngZoom(poi_lastLocation, 11));
+                                //Write Data
+                                try {
+                                    folderLocation = Environment.getExternalStorageDirectory().getAbsolutePath() + "/ProblemStatement";
+                                    File targetFile = new File(folderLocation, "data.txt");
+                                    FileWriter writer = new FileWriter(targetFile, true);
+                                    writer.write( lat + ", " + lng + "\n");
+                                    writer.flush();
+                                    writer.close();
+                                } catch (Exception e) {
+                                    Toast.makeText(MainActivity.this, "Failed to write!", Toast.LENGTH_LONG).show();
+                                    e.printStackTrace();
+                                }
+
+                                //debug
+                                String msg = "Lat :" + location.getLatitude() +
+                                        " Lng : " + location.getLongitude();
+                                Toast.makeText(MainActivity.this, msg, Toast.LENGTH_SHORT).show();
+                            } else {
+                                String msg = "No Last Known Location found";
+                                Toast.makeText(MainActivity.this, msg, Toast.LENGTH_SHORT).show();
+                            }
+                        }
+                    });
                 }
             });
 
